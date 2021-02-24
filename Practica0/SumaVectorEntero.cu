@@ -5,7 +5,7 @@
 #include "device_launch_parameters.h"
 
 __global__ void incrementar_vector(float *a, float b, int N) { //a es el array, b el numero a incrementarlo, N es el numero de elementos total del array.
-	int idThread = blockId.x * blockDim.x + threadhIdx.x; //comprobamos que no haya ningun 
+	int idThread = blockIdx.x * blockDim.x + threadIdx.x; //comprobamos que no haya ningun 
 
 	if (idThread < N) { //Esta comprobacion existe por si acaso, idx nunca deberia superar a N
 		a[idThread] = a[idThread] + b;
