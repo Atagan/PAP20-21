@@ -4,7 +4,7 @@
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 
-__global__ void incrementar_vector(float *a, float b, int N) { //a es el array, b el numero a incrementarlo, N es el numero de elementos total del array.
+__global__ void incrementar_vector(int *a, int b, int N) { //a es el array, b el numero a incrementarlo, N es el numero de elementos total del array.
 	int idThread = blockIdx.x * blockDim.x + threadIdx.x; //comprobamos que no haya ningun 
 
 	if (idThread < N) { //Esta comprobacion existe por si acaso, idx nunca deberia superar a N
@@ -17,15 +17,15 @@ int main() {
 	cudaError_t error = cudaSuccess;
 
 	//reservamos memoria en el host para el vector
-	size_t size = 8 * sizeof(float);
-	float* host_vector = (float*) malloc(size);
+	size_t size = 8 * sizeof(int);
+	int* host_vector = (int*)malloc(size);
 
-	for (int i = 0; i < 7; i++) {
+	for (int i = 0; i < 8; i++) {
 		host_vector[i] = i;
 	}
 
 	//reservamos la memoria para el dispositivo AKA: GPU
-	float* device_vector = nullptr;
+	int* device_vector = nullptr;
 
 	error = cudaMalloc((void**)&device_vector, size);
 
@@ -56,7 +56,7 @@ int main() {
 	}
 
 	//Copiamos la memoria del device al host
-	printf("El vector original: [%d, %d, %d, %d, %d, %d, %d, %d]", host_vector[0], host_vector[1], host_vector[2], host_vector[3], host_vector[4], host_vector[5], host_vector[6], host_vector[7]);
+	printf("El vector original: [%d, %d, %d, %d, %d, %d, %d, %d]\n", host_vector[0], host_vector[1], host_vector[2], host_vector[3], host_vector[4], host_vector[5], host_vector[6], host_vector[7]);
 
 	error = cudaMemcpy(host_vector, device_vector, size, cudaMemcpyDeviceToHost);
 
@@ -65,7 +65,7 @@ int main() {
 		return 1;
 	}
 
-	printf("El vector tras sumarle 10: [%d, %d, %d, %d, %d, %d, %d, %d]", host_vector[0], host_vector[1], host_vector[2], host_vector[3], host_vector[4], host_vector[5], host_vector[6], host_vector[7]);
+	printf("El vector tras sumarle 10: [%d, %d, %d, %d, %d, %d, %d, %d]\n", host_vector[0], host_vector[1], host_vector[2], host_vector[3], host_vector[4], host_vector[5], host_vector[6], host_vector[7]);
 
 	error = cudaFree(device_vector);
 	if (error != cudaSuccess) {
@@ -74,6 +74,6 @@ int main() {
 	}
 	free(host_vector);
 
-	printf("todo ok");
+	printf("Ejecucion del programa correcta");
 	return(0);
 }
