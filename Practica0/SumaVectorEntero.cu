@@ -4,76 +4,120 @@
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 
-__global__ void incrementar_vector(int *a, int b, int N) { //a es el array, b el numero a incrementarlo, N es el numero de elementos total del array.
-	int idThread = blockIdx.x * blockDim.x + threadIdx.x; //comprobamos que no haya ningun 
+__global__ void sumarMatriz(int *a, int *b, int N) { //a es una matriz, b la otra, N es el numero de elementos total del array que representa la matriz.
+	int idThread = blockIdx.x * blockDim.x + threadIdx.x; //comprobamos que no haya ningun problema
 
 	if (idThread < N) { //Esta comprobacion existe por si acaso, idx nunca deberia superar a N
-		a[idThread] = a[idThread] + b;
+		a[idThread] = a[idThread] + b[idThread];
 	}
 }
 
 
 int main() {
 	cudaError_t error = cudaSuccess;
-
 	//reservamos memoria en el host para el vector
-	size_t size = 8 * sizeof(int);
-	int* host_vector = (int*)malloc(size);
+	size_t size = 4 * 4 * sizeof(int);
+	int* host_matrixA = (int*)malloc(size);
+	int* host_matrixB = (int*)malloc(size);
 
-	for (int i = 0; i < 8; i++) {
-		host_vector[i] = i;
+
+	for (int i = 0; i < 4; i++) {
+		for (int j = 0; j < 4; j++){
+			host_matrixA[j + (i - 1) * 4] = i + j;
+			host_matrixB[j + (i - 1) * 4] = i;
+		}
 	}
 
-	//reservamos la memoria para el dispositivo AKA: GPU
-	int* device_vector = nullptr;
+//reservamos la memoria para el dispositivo AKA: GPU
+int* device_matrixA = nullptr;
+int* device_matrixB = nullptr;
 
-	error = cudaMalloc((void**)&device_vector, size);
+error = cudaMalloc((void**)&device_matrixA, size);
 
-	if (error != cudaSuccess) {
-		printf("addWithCuda failed!");
-		return 1;
+if (error != cudaSuccess) {
+	printf("addWithCuda failed!");
+	return 1;
+}
+
+error = cudaMalloc((void**)&device_matrixB, size);
+
+if (error != cudaSuccess) {
+	printf("addWithCuda failed!");
+	return 1;
+}
+
+//Copiar memoria de host a device
+error = cudaMemcpy(device_matrixA, host_matrixA, size, cudaMemcpyHostToDevice);
+
+if (error != cudaSuccess) {
+	printf("addWithCuda failed!");
+	return 1;
+}
+
+error = cudaMemcpy(device_matrixB, host_matrixB, size, cudaMemcpyHostToDevice);
+
+if (error != cudaSuccess) {
+	printf("addWithCuda failed!");
+	return 1;
+}
+
+//Lanzar el kernel que haga la operacion
+
+int threadsPerBlock = 256;
+int blocksPerGrid = (16 + threadsPerBlock - 1) / threadsPerBlock;
+sumarMatriz<<<blocksPerGrid, threadsPerBlock>>>(device_matrixA, device_matrixB, 16);
+
+
+error = cudaGetLastError();
+if (error != cudaSuccess) {
+	printf("addWithCuda failed!");
+	return 1;
+}
+
+printf("MatrizA original: \n");
+for (int i = 0; i < 4; i++){
+	for (int j = 0; j < 4; j++) {
+		printf(" %d", host_matrixA[(j + (i - 1) * 4)]);
 	}
+	printf("\n");
+}
 
-	//Copiar memoria de host a device
-	error = cudaMemcpy(device_vector, host_vector, size, cudaMemcpyHostToDevice);
-
-	if (error != cudaSuccess) {
-		printf("addWithCuda failed!");
-		return 1;
+printf("MatrizB original: \n");
+for (int i = 0; i < 4; i++) {
+	for (int j = 0; j < 4; j++) {
+		printf(" %d", host_matrixB[(j + (i - 1) * 4)]);
 	}
+	printf("\n");
+}
+//Copiamos la memoria del device al host
+error = cudaMemcpy(host_matrixA, device_matrixA, size, cudaMemcpyDeviceToHost);
 
-	//Lanzar el kernel que haga la operacion
+if (error != cudaSuccess) {
+	printf("addWithCuda failed!");
+	return 1;
+}
 
-	int threadsPerBlock = 256;
-	int blocksPerGrid = (7 + threadsPerBlock - 1) / threadsPerBlock;
-	incrementar_vector <<<blocksPerGrid, threadsPerBlock >>> (device_vector, 10, 8);
-
-
-	error = cudaGetLastError();
-	if (error != cudaSuccess) {
-		printf("addWithCuda failed!");
-		return 1;
+printf("Matriz resultado: \n");
+for (int i = 0; i < 4; i++) {
+	for (int j = 0; j < 4; j++) {
+		printf(" %d", host_matrixA[(j + (i - 1) * 4)]);
 	}
+	printf("\n");
+}
 
-	//Copiamos la memoria del device al host
-	printf("El vector original: [%d, %d, %d, %d, %d, %d, %d, %d]\n", host_vector[0], host_vector[1], host_vector[2], host_vector[3], host_vector[4], host_vector[5], host_vector[6], host_vector[7]);
+error = cudaFree(device_matrixA);
+if (error != cudaSuccess) {
+	printf("addWithCuda failed!");
+	return 1;
+}
+error = cudaFree(device_matrixB);
+if (error != cudaSuccess) {
+	printf("addWithCuda failed!");
+	return 1;
+}
+free(host_matrixA);
+free(host_matrixB);
 
-	error = cudaMemcpy(host_vector, device_vector, size, cudaMemcpyDeviceToHost);
-
-	if (error != cudaSuccess) {
-		printf("addWithCuda failed!");
-		return 1;
-	}
-
-	printf("El vector tras sumarle 10: [%d, %d, %d, %d, %d, %d, %d, %d]\n", host_vector[0], host_vector[1], host_vector[2], host_vector[3], host_vector[4], host_vector[5], host_vector[6], host_vector[7]);
-
-	error = cudaFree(device_vector);
-	if (error != cudaSuccess) {
-		printf("addWithCuda failed!");
-		return 1;
-	}
-	free(host_vector);
-
-	printf("Ejecucion del programa correcta");
-	return(0);
+printf("Ejecucion del programa correcta");
+return(0);
 }
