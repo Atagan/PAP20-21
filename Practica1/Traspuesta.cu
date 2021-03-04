@@ -3,18 +3,15 @@
 
 
 __global__ void transponer(int *in, int *out){
-	int x = blockIdx.x * TILE_DIM + threadIdx.x;
-	int y = blockIdx.y * TILE_DIM + threadIdx.y;
+	int x = blockIdx.x * blockDim.x + threadIdx.x;
+	int y = blockIdx.y * blockDim.x + threadIdx.y;
 	int width = gridDim.x * TILE_DIM;
 	out[x][y]=in[y][x];
 }
 
 int main(void) {
 	cudaError_t error = cudaSuccess;
-	int h_matrix = (int*) malloc(4*sizeof(int));
-	for(int i = 0; i < 4; i++){
-		h_matrix[i] = (int*) malloc(4*sizeof(int));
-	}
+	int h_matrix[4][4];
 
 	for(i=0;i<4;i++){
 		for(j=0;j<4;j++){
