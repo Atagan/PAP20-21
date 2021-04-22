@@ -1,4 +1,4 @@
-object Prueba2{
+object prueba3{
   println("hello")
   1+4
   var x=2
@@ -7,4 +7,5 @@ object Prueba2{
   x=x+y
   x
   val msg= "hola"
+
 }
